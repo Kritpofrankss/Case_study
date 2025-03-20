@@ -122,6 +122,12 @@ qa-system/
 - **Efficient Document Retrieval:** Used FAISS for fast similarity searches
 - **Ensuring Accurate Responses:** Used structured prompt engineering for GPT-3.5-turbo
 
+## Performance Metrics and Observations
+The model performs well in extracting answers from documents, but there are some challenges:
+- **Memory Handling Issues:** The conversation memory is not optimized, sometimes failing to retain context from older interactions.
+- **Noise in Responses:** Although paraphrasing helps refine answers, occasional noise such as mixed-language responses still occurs.
+- **Rephrased Answers:** Even after rephrasing, some responses still include elements of other languages, affecting clarity.
+
 ## Future Improvements
 - Add **support for more languages**
 - Implement **feedback-based model retraining**
