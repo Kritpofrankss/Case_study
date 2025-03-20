@@ -3,7 +3,11 @@
 ## Overview
 This project is a **Question Answering (QA) System** designed to extract accurate and relevant answers from the **WISESIGHT** dataset, which includes fundraising information and corporate profiles in **Thai and English**. The system leverages **Flask, LangChain, FAISS, and OpenAI's GPT-3.5-turbo** for document retrieval and response generation.
 
-![My Image](https://github.com/Kritpofrankss/Case_study/blob/main/IMG_6590.jpg?raw=true)
+<p align="center">
+  <img src="https://github.com/Kritpofrankss/Case_study/blob/main/IMG_6590.jpg?raw=true" width="300px">
+  <img src="https://github.com/Kritpofrankss/Case_study/blob/main/IMG_6591.jpg?raw=true" width="300px">
+</p>
+
 
 ## Features
 - **Multilingual Support**: Answers questions in both Thai and English
