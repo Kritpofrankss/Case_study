@@ -1,0 +1,17 @@
+Flask
+langchain-community
+langchain-openai
+langchain-huggingface
+openai
+faiss-cpu
+sentence-transformers
+PyMuPDF
+Flask
+langchain
+openai
+beautifulsoup4
+lxml
+html5lib
+soupsieve
+requests
+werkzeug

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Q&A Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Q&A Chatbot</h1>
+
+        <!-- Upload Section with Tabs -->
+        <div class="upload-section">
+            <h2>อัพโหลดข้อมูลที่ต้องการถาม</h2>
+            
+            <div class="upload-tabs">
+                <div class="tab active" data-tab="file-tab">อัพโหลดไฟล์ PDF</div>
+                <div class="tab" data-tab="url-tab">ใช้ URL</div>
+            </div>
+            
+            <div class="tab-content active" id="file-tab">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <input type="file" id="file" accept=".pdf">
+                    <button type="submit">อัพโหลด</button>
+                </form>
+            </div>
+            
+            <div class="tab-content" id="url-tab">
+                <form id="url-form">
+                    <input type="url" id="url-input" placeholder="ใส่ URL ของเว็บไซต์...">
+                    <button type="submit">ดึงข้อมูล</button>
+                </form>
+            </div>
+            
+            <!-- เพิ่ม Language Selector -->
+            <div class="language-selector">
+                <label for="language-select">เลือกภาษาสำหรับคำตอบ:</label>
+                <select id="language-select">
+                    <option value="auto">อัตโนมัติ (ตามคำถาม)</option>
+                    <option value="th">ภาษาไทย</option>
+                    <option value="en">ภาษาอังกฤษ</option>
+                </select>
+            </div>
+            
+            <!-- เพิ่ม Clear History Button -->
+            <div class="clear-history-container">
+                <button id="clear-history-btn" class="clear-btn">ล้างประวัติการสนทนา</button>
+            </div>
+            
+            <p id="upload-status"></p>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-container">
+            <div id="chat-box">
+                <!-- แสดงข้อความต้อนรับเมื่อโหลดหน้า -->
+                <div class="chat bot-chat">
+                    <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+                    สวัสดีครับ! ฉันเป็น PDF Q&A Chatbot ที่จะช่วยตอบคำถามจากไฟล์ PDF หรือเว็บไซต์ของคุณ กรุณาอัพโหลดไฟล์ PDF หรือใส่ URL ก่อนเริ่มถามคำถาม
+                    <div class="chat-timestamp">วันนี้ เวลา <span id="current-time"></span></div>
+                </div>
+            </div>
+            <div class="input-container">
+                <input type="text" id="question" placeholder="พิมพ์คำถามของคุณ...">
+                <button id="ask-btn">ถาม</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // แสดงเวลาปัจจุบัน
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById("current-time").innerText = `${hours}:${minutes}`;
+        }
+        updateCurrentTime();
+
+        // สลับแท็บ
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // ลบคลาส active จากทุกแท็บและเนื้อหา
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // เพิ่มคลาส active ให้แท็บที่คลิกและเนื้อหาที่เกี่ยวข้อง
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // อัพโหลดไฟล์ PDF
+        document.getElementById("upload-form").addEventListener("submit", function(e) {
+            e.preventDefault();
+            let formData = new FormData();
+            const fileInput = document.getElementById("file");
+            
+            if (!fileInput.files[0]) {
+                document.getElementById("upload-status").innerText = "กรุณาเลือกไฟล์ PDF ก่อนอัพโหลด";
+                return;
+            }
+            
+            formData.append("file", fileInput.files[0]);
+            document.getElementById("upload-status").innerText = "กำลังอัพโหลด...";
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("upload-status").innerText = data.message || data.error;
+                
+                if (data.message) {
+                    // เพิ่มข้อความยืนยันการอัพโหลดในกล่องแชท
+                    let chatBox = document.getElementById("chat-box");
+                    let now = new Date();
+                    let hours = now.getHours().toString().padStart(2, '0');
+                    let minutes = now.getMinutes().toString().padStart(2, '0');
+                    
+                    let botMessage = `
+                        <div class='chat bot-chat'>
+                            <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+                            อัพโหลดไฟล์ "${fileInput.files[0].name}" สำเร็จแล้ว! คุณสามารถถามคำถามเกี่ยวกับเนื้อหาในไฟล์ได้เลย
+                            <div class="chat-timestamp">วันนี้ เวลา ${hours}:${minutes}</div>
+                        </div>
+                    `;
+                    chatBox.innerHTML += botMessage;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            })
+            .catch(error => {
+                document.getElementById("upload-status").innerText = "เกิดข้อผิดพลาดในการอัพโหลด";
+                console.error("Error:", error);
+            });
+        });
+
+        // ส่ง URL
+        document.getElementById("url-form").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const urlInput = document.getElementById("url-input");
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                document.getElementById("upload-status").innerText = "กรุณาระบุ URL";
+                return;
+            }
+            
+            document.getElementById("upload-status").innerText = "กำลังดึงข้อมูลจาก URL...";
+            
+            const formData = new FormData();
+            formData.append("url", url);
+            
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("upload-status").innerText = data.message || data.error;
+                
+                if (data.message) {
+                    // เพิ่มข้อความยืนยันการดึงข้อมูลในกล่องแชท
+                    let chatBox = document.getElementById("chat-box");
+                    let now = new Date();
+                    let hours = now.getHours().toString().padStart(2, '0');
+                    let minutes = now.getMinutes().toString().padStart(2, '0');
+                    
+                    let botMessage = `
+                        <div class='chat bot-chat'>
+                            <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+                            ดึงข้อมูลจาก URL สำเร็จแล้ว! คุณสามารถถามคำถามเกี่ยวกับเนื้อหาจากเว็บไซต์ได้เลย
+                            <div class="chat-timestamp">วันนี้ เวลา ${hours}:${minutes}</div>
+                        </div>
+                    `;
+                    chatBox.innerHTML += botMessage;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            })
+            .catch(error => {
+                document.getElementById("upload-status").innerText = "เกิดข้อผิดพลาดในการดึงข้อมูลจาก URL";
+                console.error("Error:", error);
+            });
+        });
+
+        document.getElementById("ask-btn").addEventListener("click", askQuestion);
+        document.getElementById("question").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                askQuestion();
+            }
+        });
+
+        function askQuestion() {
+            let questionInput = document.getElementById("question");
+            let question = questionInput.value.trim();
+            if (!question) return;
+            
+            // เพิ่มการดึงค่าภาษาที่เลือก
+            let selectedLanguage = document.getElementById("language-select").value;
+            
+            let chatBox = document.getElementById("chat-box");
+            let now = new Date();
+            let hours = now.getHours().toString().padStart(2, '0');
+            let minutes = now.getMinutes().toString().padStart(2, '0');
+            
+            let userMessage = `
+                <div class='chat user-chat'>
+                    <div class="user-avatar"><i class="fas fa-user"></i></div>
+                    ${question}
+                    <div class="chat-timestamp">วันนี้ เวลา ${hours}:${minutes}</div>
+                </div>
+            `;
+            chatBox.innerHTML += userMessage;
+            questionInput.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // แสดงข้อความ "กำลังพิมพ์..." ระหว่างรอคำตอบ
+            let typingIndicator = `
+                <div class='chat bot-chat' id='typing-indicator'>
+                    <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+                    กำลังพิมพ์<span class="typing-dots">...</span>
+                </div>
+            `;
+            chatBox.innerHTML += typingIndicator;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            fetch("/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question, language: selectedLanguage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // ลบข้อความ "กำลังพิมพ์..."
+                document.getElementById("typing-indicator").remove();
+                
+                let now = new Date();
+                let hours = now.getHours().toString().padStart(2, '0');
+                let minutes = now.getMinutes().toString().padStart(2, '0');
+                
+                let botMessage = `
+                    <div class='chat bot-chat'>
+                        <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+                        ${data.answer}
+                        <div class="chat-timestamp">วันนี้ เวลา ${hours}:${minutes}</div>
+                    </div>
+                `;
+                chatBox.innerHTML += botMessage;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                // ลบข้อความ "กำลังพิมพ์..."
+                document.getElementById("typing-indicator").remove();
+                
+                let now = new Date();
+                let hours = now.getHours().toString().padStart(2, '0');
+                let minutes = now.getMinutes().toString().padStart(2, '0');
+                
+                let errorMessage = `
+                    <div class='chat bot-chat'>
+                        <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+                        ขออภัย เกิดข้อผิดพลาดในการประมวลผลคำถามของคุณ กรุณาลองใหม่อีกครั้ง
+                        <div class="chat-timestamp">วันนี้ เวลา ${hours}:${minutes}</div>
+                    </div>
+                `;
+                chatBox.innerHTML += errorMessage;
+                chatBox.scrollTop = chatBox.scrollHeight;
+                console.error("Error:", error);
+            });
+        }
+
+        // เพิ่ม Event Listener สำหรับปุ่ม Clear History
+        document.getElementById("clear-history-btn").addEventListener("click", clearHistory);
+
+        // ฟังก์ชันล้างประวัติการสนทนาและข้อมูลที่อัพโหลด
+        function clearHistory() {
+            // ล้างกล่องแชท
+            let chatBox = document.getElementById("chat-box");
+            
+            // เก็บเฉพาะข้อความต้อนรับแรก
+            chatBox.innerHTML = `
+                <div class="chat bot-chat">
+                    <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+                    สวัสดีครับ! ฉันเป็น PDF Q&A Chatbot ที่จะช่วยตอบคำถามจากไฟล์ PDF หรือเว็บไซต์ของคุณ กรุณาอัพโหลดไฟล์ PDF หรือใส่ URL ก่อนเริ่มถามคำถาม
+                    <div class="chat-timestamp">วันนี้ เวลา <span id="current-time"></span></div>
+                </div>
+            `;
+            
+            // อัพเดทเวลาปัจจุบัน
+            updateCurrentTime();
+            
+            // รีเซ็ตฟอร์มอัพโหลด
+            document.getElementById("file").value = "";
+            document.getElementById("url-input").value = "";
+            document.getElementById("upload-status").innerText = "ล้างประวัติการสนทนาและข้อมูลเรียบร้อยแล้ว";
+            
+            // ส่งคำขอไปยังเซิร์ฟเวอร์เพื่อล้างข้อมูลฝั่งเซิร์ฟเวอร์
+            fetch("/clear_history", {
+                method: "POST"
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Server response:", data);
+            })
+            .catch(error => {
+                console.error("Error clearing history:", error);
+            });
+        }
+
+        // เพิ่มเอฟเฟกต์จุดกำลังพิมพ์
+        setInterval(() => {
+            const typingDots = document.querySelector(".typing-dots");
+            if (typingDots) {
+                if (typingDots.textContent === "...") typingDots.textContent = ".";
+                else if (typingDots.textContent === ".") typingDots.textContent = "..";
+                else if (typingDots.textContent === "..") typingDots.textContent = "...";
+            }
+        }, 500);
+    </script>
+</body>
+</html>
